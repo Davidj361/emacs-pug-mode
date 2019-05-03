@@ -300,6 +300,9 @@ declaration"
   (setq-local comment-end "")
   (setq-local comment-end-skip "[ 	]*\\(\\s>\\|\n\\)")
   (setq-local comment-use-syntax nil)
+  (setq-local pug-tab-width (if (boundp 'tab-width)
+								tab-width
+							  pug-tab-width))
   (setq font-lock-multiline t
 		font-lock-defaults '((pug-font-lock-keywords) t t)))
 
