@@ -280,7 +280,9 @@ declaration"
     (define-key map "\C-c\C-u"  #'pug-up-list)
     (define-key map "\C-c\C-d"  #'pug-down-list)
     (define-key map "\C-c\C-k"  #'pug-kill-line-and-indent)
+	(define-key map (kbd "<backtab>") 'pug-dedent-simple)
     map))
+
 
 ;;;###autoload
 (define-derived-mode pug-mode prog-mode "Pug"
@@ -289,7 +291,7 @@ declaration"
 \\{pug-mode-map}"
   (set-syntax-table pug-mode-syntax-table)
   (add-to-list 'font-lock-extend-region-functions #'pug-extend-region)
-  (setq-local indent-line-function #'pug-indent-line)
+  (setq-local indent-line-function #'pug-indent-line-function)
   (setq-local indent-region-function #'pug-indent-region)
   (setq-local parse-sexp-lookup-properties t)
   (setq-local electric-indent-chars '(?|))
@@ -503,6 +505,36 @@ indentations."
           (unless (eolp) (indent-to this-line-column)))
         (forward-line 1)))
     (move-marker end nil)))
+
+(defcustom pug-indent-trigger-commands
+  '(indent-for-tab-command yas-expand yas/expand pug-dedent-simple)
+  "Commands that might trigger a `pug-indent-line' call."
+  :type '(repeat symbol)
+  :group 'pug)
+
+
+(defun pug-indent-simple (&optional backwards)
+  (interactive)
+  (save-excursion
+    (indent-line-to
+     (max 0 (indent-next-tab-stop (current-indentation) backwards))))
+  (when (< (current-column) (current-indentation))
+    (back-to-indentation)))
+
+(defun pug-dedent-simple ()
+  (interactive)
+  (pug-indent-simple 'backwards))
+
+;; Should we smart indent or simple idnent
+(defun pug-indent-line-function ()
+  "`indent-line-function' for pug-mode indentation.
+When the variable `last-command' is equal to one of the symbols
+inside `pug-indent-trigger-commands' it cycles possible
+indentation levels from right to left."
+  (if (and (memq this-command pug-indent-trigger-commands)
+	   (eq last-command this-command))
+      (pug-indent-simple)
+    (pug-indent-line)))
 
 (defun pug-indent-line ()
   "Indent the current line. The first time this command is used, the line will
