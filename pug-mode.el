@@ -61,13 +61,6 @@ the backspaced line be re-indented along with the line itself."
   :type 'boolean
   :group 'pug)
 
-(defcustom pug-tab-width (if (boundp 'tab-width)
-							 tab-width
-						   2)
-  "Indentation character width for nested statements."
-  :type 'integer
-  :group 'pug)
-
 (defvar pug-indent-function #'pug-indent-p
   "This function should look at the current line and return true if the next
 line could be nested within this line.")
@@ -300,9 +293,9 @@ declaration"
   (setq-local comment-end "")
   (setq-local comment-end-skip "[ 	]*\\(\\s>\\|\n\\)")
   (setq-local comment-use-syntax nil)
-  (setq-local pug-tab-width (if (boundp 'tab-width)
-								tab-width
-							  pug-tab-width))
+  (setq-local tab-width (if (boundp 'tab-width)
+							tab-width
+						  2))
   (setq font-lock-multiline t
 		font-lock-defaults '((pug-font-lock-keywords) t t)))
 
@@ -332,7 +325,7 @@ ARG (the univeral argument) is non-nil, use buffered comments (//)."
 			 (indent-to indent)
 			 (beginning-of-line)
 			 (pug-mark-sexp)
-			 (pug-reindent-region-by pug-tab-width))))))
+			 (pug-reindent-region-by tab-width))))))
 
 (defun pug-uncomment-block (&optional beg end)
   "Uncomment the pug block at point or blocks in region."
@@ -351,7 +344,7 @@ ARG (the univeral argument) is non-nil, use buffered comments (//)."
 		   (cond ((looking-at-p "^\\(\\s-*\\)-?//-?\\s-*$")
 				  (pug-mark-sexp)
 				  (kill-line 1)
-				  (pug-reindent-region-by (- pug-tab-width)))
+				  (pug-reindent-region-by (- tab-width)))
 				 (t
 				  (uncomment-region (line-beginning-position)
 									(line-end-position))))))))
@@ -464,7 +457,7 @@ the sexp rather than the first non-whitespace character of the next line."
 										  ,pug-control-re)
 						  if (looking-at-p opener) return t
 						  finally return nil)))
-	pug-tab-width))
+	tab-width))
 
 (defun pug-compute-indentation ()
   "Calculate the maximum sensible indentation for the current line."
@@ -491,7 +484,7 @@ indentations."
 	(let (this-line-column current-column
 						   (next-line-column
 							(if (and (equal last-command this-command) (/= (current-indentation) 0))
-								(* (/ (- (current-indentation) 1) pug-tab-width) pug-tab-width)
+								(* (/ (- (current-indentation) 1) tab-width) tab-width)
 							  (pug-compute-indentation))))
 	  (while (< (point) end)
 		(setq this-line-column next-line-column
@@ -542,7 +535,7 @@ indentation levels from right to left."
 (defun pug-indent-line ()
   "Indent the current line. The first time this command is used, the line will
 be indented to the maximum sensible indentation. Each immediately subsequent
-usage will back-dent the line by `pug-tab-width' spaces. On reaching column 0,
+usage will back-dent the line by `tab-width' spaces. On reaching column 0,
 it will cycle back to the maximum sensible indentation."
   (interactive "*")
   (let ((ci (current-indentation))
@@ -552,7 +545,7 @@ it will cycle back to the maximum sensible indentation."
 	  (beginning-of-line)
 	  (delete-horizontal-space)
 	  (if (and (equal last-command this-command) (/= ci 0))
-		  (indent-to (* (/ (- ci 1) pug-tab-width) pug-tab-width))
+		  (indent-to (* (/ (- ci 1) tab-width) tab-width))
 		(indent-to need)))
 	(if (< (current-column) (current-indentation))
 		(forward-to-indentation 0))))
@@ -571,7 +564,7 @@ will remove the spaces instead. Assumes all lines in the region have indentation
 (defun pug-electric-backtab (arg)
   "Delete characters or back-dent the current line. If invoked following only
 whitespace on a line, will back-dent the line and all nested lines to the
-immediately previous multiple of `pug-tab-width' spaces.
+immediately previous multiple of `tab-width' spaces.
 
 Set `pug-backspace-backdents-nesting' to nil to just back-dent the current
 line."
@@ -583,15 +576,15 @@ line."
 	  (if pug-backspace-backdents-nesting
 		  (pug-mark-sexp-but-not-next-line)
 		(set-mark (save-excursion (end-of-line) (point))))
-	  (indent-rigidly beg (region-end) (* (- arg) pug-tab-width))
-	  ;; (pug-reindent-region-by (* (- arg) pug-tab-width))
+	  (indent-rigidly beg (region-end) (* (- arg) tab-width))
+	  ;; (pug-reindent-region-by (* (- arg) tab-width))
 	  (back-to-indentation)
 	  (pop-mark))))
 
 (defun pug-electric-backspace (arg)
   "Delete characters or back-dent the current line. If invoked following only
 whitespace on a line, will back-dent the line and all nested lines to the
-immediately previous multiple of `pug-tab-width' spaces.
+immediately previous multiple of `tab-width' spaces.
 
 Set `pug-backspace-backdents-nesting' to nil to just back-dent the current
 line."
@@ -604,7 +597,7 @@ line."
 						 (looking-at "^[ \t]+$"))
 		 (if indent-tabs-mode
 			 (backward-delete-char-untabify arg)
-		   (let ((movement (- pug-tab-width (% (current-column) pug-tab-width)))
+		   (let ((movement (- tab-width (% (current-column) tab-width)))
 				 (p (point)))
 			 (when (bolp) (setq movement 1))
 			 (delete-char (- movement)))))
@@ -618,11 +611,11 @@ line."
   (beginning-of-line)
   (pug-mark-sexp-but-not-next-line)
   (kill-line 1)
-  (pug-reindent-region-by (* -1 pug-tab-width)))
+  (pug-reindent-region-by (* -1 tab-width)))
 
 (defun pug-indent-string ()
-  "Return the indentation string for `pug-tab-width'."
-  (mapconcat #'identity (make-list pug-tab-width " ") ""))
+  "Return the indentation string for `tab-width'."
+  (mapconcat #'identity (make-list tab-width " ") ""))
 
 ;;;###autoload
 (defun pug-compile (&optional arg)
